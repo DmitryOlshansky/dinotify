@@ -15,12 +15,21 @@ unittest
     ubyte[] data = [1, 2, 3, 4];
     write(tempDir ~ "/killme", data);
     auto events = monitor.read();
-    assert(events[0].mask == IN_CREATE);
-    writeln(events[0].name);
+    assert(events[0].mask & IN_CREATE);
+    assert(events[0].name == "killme");
     remove(tempDir ~ "/killme");
     events = monitor.read();
-    assert(events[0].mask == IN_DELETE);
-    writeln(events[0].name);
+    assert(events[0].mask & IN_DELETE);
+    // Note: doesn't track nested directories
+    mkdir(tempDir ~ "/some-dir");
+    write(tempDir ~ "/some-dir/victim", data);
+    events = monitor.read();
+    assert(events.length == 1);
+    assert(events[0].mask & IN_CREATE);
+    assert(events[0].name == "some-dir");
+    remove(tempDir ~ "/some-dir/victim");
+    rmdir(tempDir ~ "/some-dir/");
+
 }
 
 import core.sys.posix.unistd;
@@ -66,8 +75,8 @@ extern(C){
 
 auto size(ref inotify_event e) { return e.sizeof + e.len; }
 
-/// Get name out of event structure
-public const(char)[] name(ref inotify_event e)
+// Get name out of event structure
+const(char)[] name(ref inotify_event e)
 {
     auto ptr = cast(const(char)*)(&e+1); 
     auto len = strnlen(ptr, e.len);
@@ -81,14 +90,21 @@ public struct Watch{
     private int wd;   
 }
 
+/// D-ified intofiy event, holds slice to temporary buffer with z-string.
+public struct Event{
+    uint mask, cookie;
+    const(char)[] name;
+}
+
 public struct INotify{
     private int fd; // inotify fd
     private ubyte[] buffer;
+    private Event[] events;
     
     private this(int fd){
         enforce(fd >= 0, "failed to init inotify");
         this.fd = fd;
-        buffer = new ubyte[maxEvent];        
+        buffer = new ubyte[maxEvent];
     }
 
     @disable this(this);
@@ -114,23 +130,25 @@ public struct INotify{
 
     /**
         Issue a blocking read to get a bunch of events,
-        there is going to be at least one event in the returned slice.
+        there is at least one event in the returned slice.
 
         Note that returned slice is mutable.
         This indicates that it is invalidated on 
         the next call to read, just like byLine in std.stdio.
     */
-    inotify_event[] read()
+    Event[] read()
     {
         long len = .read(fd, buffer.ptr, buffer.length);
         enforce(len > 0, "failed to read inotify event");
         ubyte* head = buffer.ptr;
-        inotify_event[] events;
+        events.length = 0;
+        events.assumeSafeAppend();        
         while(len > 0){
             auto eptr = cast(inotify_event*)head;
-            head += (*eptr).size;
-            len -= (*eptr).size;
-            events ~= *eptr;
+            auto sz = size(*eptr);
+            head += sz;
+            len -= sz;
+            events ~= Event(eptr.mask, eptr.cookie, name(*eptr));
         }
         return events;
     }
@@ -141,4 +159,5 @@ public struct INotify{
     }
 }
 
+///
 public auto iNotify(){ return INotify(inotify_init()); }
