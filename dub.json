@@ -3,6 +3,7 @@
 	"description": "Simple D interface for inotify (Linux file events monitoring)",
 	"copyright": "Copyright © 2014, Dmitry Olshansky",
 	"authors": ["Dmitry Olshansky"],
+  "license": "MIT",
 	"dependencies": {
 	}
 }
