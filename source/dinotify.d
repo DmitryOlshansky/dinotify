@@ -33,44 +33,13 @@ unittest
 }
 
 import core.sys.posix.unistd;
+import core.sys.linux.sys.inotify;
 import std.exception;
 
 // core.sys.linux is lacking, so just list proper prototypes on our own
 extern(C){
-
-    /// Event data-structure as returned by the OS,
-    /// has trailing name field (a C-style thing)
-    public struct inotify_event {
-       int  wd;     /** Watch descriptor */
-       uint mask;   /** Mask describing event */
-       uint cookie; /** Unique cookie associating related
-                       events (for rename(2)) */
-       uint len;    /** Size of name field */
-       //char[0] name; /* Optional null-terminated name */
-    }
-
-    int inotify_init();
-    int inotify_init1(int flags);
-    int inotify_add_watch(int fd, const char *pathname, uint mask);
-    int inotify_rm_watch(int fd, int wd);
-
     size_t strnlen(const(char)* s, size_t maxlen);
     enum NAME_MAX = 255;
-    
-    /// Flags to use in INotify.add
-    public enum
-        IN_ACCESS = 0x00000001,      /** File was accessed */
-        IN_MODIFY = 0x00000002,      /** File was modified */
-        IN_ATTRIB = 0x00000004,      /** Metadata changed */
-        IN_CLOSE_WRITE = 0x00000008,      /** Writtable file was closed */
-        IN_CLOSE_NOWRITE = 0x00000010,      /** Unwrittable file closed */
-        IN_OPEN = 0x00000020,      /** File was opened */
-        IN_MOVED_FROM = 0x00000040,      /** File was moved from X */
-        IN_MOVED_TO = 0x00000080,      /** File was moved to Y */
-        IN_CREATE = 0x00000100,      /** Subfile was created */
-        IN_DELETE = 0x00000200,      /** Subfile was deleted */
-        IN_DELETE_SELF = 0x00000400,      /** Self was deleted */
-        IN_MOVE_SELF = 0x00000800;      /** Self was moved */
 }
 
 auto size(ref inotify_event e) { return e.sizeof + e.len; }
@@ -97,14 +66,14 @@ public struct Event{
 }
 
 public struct INotify{
-    private int fd; // inotify fd
+    private int fd = -1; // inotify fd
     private ubyte[] buffer;
     private Event[] events;
     
     private this(int fd){
         enforce(fd >= 0, "failed to init inotify");
         this.fd = fd;
-        buffer = new ubyte[maxEvent];
+        buffer = new ubyte[20*maxEvent];
     }
 
     @disable this(this);
