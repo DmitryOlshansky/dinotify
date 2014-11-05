@@ -12,6 +12,7 @@ unittest
     import std.process, std.stdio : writeln;
     auto monitor = iNotify();
     system("mkdir tmp");
+    // literals are zero-terminated
     monitor.add("tmp".ptr, IN_CREATE | IN_DELETE);
     ubyte[] data = [1, 2, 3, 4];
     system("touch tmp/killme");
@@ -28,7 +29,7 @@ unittest
     system("touch tmp/some-dir/victim");
     events = monitor.read();
     assert(events.length == 1);
-    assert(events[0].mask == (IN_ISDIR | IN_CREATE));
+    assert(events[0].mask == (IN_ISDIR | IN_CREATE | IN_MOVE));
     assert(events[0].name == "some-dir");
     system("rm -rf tmp");
 }
@@ -136,7 +137,7 @@ public auto iNotify(){ return INotify(inotify_init()); }
     Event as returned by INotifyTree.
     In constrast to Event, it has full path and no watch descriptor.
 +/
-struct TreeEvent{
+public struct TreeEvent{
     uint mask;
     string path;
 }
@@ -145,7 +146,7 @@ struct TreeEvent{
     Track events in the whole directory tree, automatically adding watches to
     any new sub-directories and stopping watches in the deleted ones.
 +/
-struct INotifyTree{
+public struct INotifyTree{
     private INotify inotify;
     private uint mask;
     private Watch[string] watches;
