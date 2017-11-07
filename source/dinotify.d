@@ -9,9 +9,10 @@ private:
 ///
 unittest
 {
-    import std.process, std.stdio : writeln;
+    import std.process, std.stdio : writeln, writefln;
 
     auto monitor = iNotify();
+    executeShell("rm -rf tmp");
     executeShell("mkdir tmp");
     // literals are zero-terminated
     monitor.add("tmp".ptr, IN_CREATE | IN_DELETE);
@@ -30,9 +31,8 @@ unittest
     executeShell("touch tmp/some-dir/victim");
     events = monitor.read();
     assert(events.length == 1);
-    assert(events[0].mask == (IN_ISDIR | IN_CREATE | IN_MOVE));
+    assert(events[0].mask == (IN_ISDIR | IN_CREATE));
     assert(events[0].name == "some-dir");
-    executeShell("rm -rf tmp");
 }
 
 import core.sys.posix.unistd;
@@ -45,7 +45,7 @@ extern (C)
     size_t strnlen(const(char)* s, size_t maxlen);
     enum NAME_MAX = 255;
 }
-
+    
 auto size(ref inotify_event e)
 {
     return e.sizeof + e.len;
@@ -54,9 +54,9 @@ auto size(ref inotify_event e)
 // Get name out of event structure
 const(char)[] name(ref inotify_event e)
 {
-    auto ptr = cast(const(char)*)(&e + 1);
+    auto ptr = cast(const(char)*)(&e+1); 
     auto len = strnlen(ptr, e.len);
-    return ptr[0 .. len];
+    return ptr[0..len];
 }
 
 auto maxEvent()
@@ -67,7 +67,7 @@ auto maxEvent()
 /// Type-safe watch descriptor to help discern it from normal file descriptors
 public struct Watch
 {
-    private int wd;
+    private int wd;   
 }
 
 /// D-ified inotify event, holds slice to temporary buffer with z-string.
@@ -83,12 +83,12 @@ public struct INotify
     private int fd = -1; // inotify fd
     private ubyte[] buffer;
     private Event[] events;
-
+    
     private this(int fd)
     {
         enforce(fd >= 0, "failed to init inotify");
         this.fd = fd;
-        buffer = new ubyte[20 * maxEvent];
+        buffer = new ubyte[20*maxEvent];
     }
 
     @disable this(this);
@@ -128,10 +128,10 @@ public struct INotify
         enforce(len > 0, "failed to read inotify event");
         ubyte* head = buffer.ptr;
         events.length = 0;
-        events.assumeSafeAppend();
+        events.assumeSafeAppend();        
         while (len > 0)
         {
-            auto eptr = cast(inotify_event*) head;
+            auto eptr = cast(inotify_event*)head;
             auto sz = size(*eptr);
             head += sz;
             len -= sz;
@@ -139,10 +139,10 @@ public struct INotify
         }
         return events;
     }
-
+    
     ~this()
     {
-        if (fd >= 0)
+        if(fd >= 0)
             close(fd);
     }
 }
@@ -199,10 +199,10 @@ public struct INotifyTree
         {
             if (d.isDir)
                 addWatch(d.name);
-        }
     }
+}
 
-    ///
+///
     TreeEvent[] read()
     {
         import std.stdio;
@@ -253,8 +253,8 @@ unittest
     import std.process;
 
     executeShell("rm -rf tmp");
-    executeShell("mkdir tmp/dir1/dir11");
-    executeShell("mkdir tmp/dir1/dir12");
+    executeShell("mkdir -p tmp/dir1/dir11");
+    executeShell("mkdir -p tmp/dir1/dir12");
     auto ntree = iNotifyTree("tmp/dir1", IN_CREATE | IN_DELETE);
     executeShell("touch tmp/dir1/dir11/a.tmp");
     executeShell("touch tmp/dir1/dir12/b.tmp");
