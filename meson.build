@@ -25,6 +25,8 @@ static_library(
     install: true,
 )
 
+install_data('source/dinotify.d', install_dir: get_option('prefix') + '/include/d')
+
 # The pkgconfig system produces C/C++ library flags which are of
 # little use with ldc2, so must do things the hard way. :-(
 
