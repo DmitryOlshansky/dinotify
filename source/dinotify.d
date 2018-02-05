@@ -4,6 +4,12 @@
 */
 module dinotify;
 
+import core.time;
+import core.sys.posix.unistd;
+import core.sys.posix.poll;
+import core.sys.linux.sys.inotify;
+import std.exception;
+
 private:
 
 ///
@@ -34,10 +40,6 @@ unittest
     assert(events[0].mask == (IN_ISDIR | IN_CREATE));
     assert(events[0].name == "some-dir");
 }
-
-import core.sys.posix.unistd;
-import core.sys.linux.sys.inotify;
-import std.exception;
 
 // core.sys.linux is lacking, so just list proper prototypes on our own
 extern (C)
@@ -117,18 +119,35 @@ public struct INotify
     /**
         Issue a blocking read to get a bunch of events,
         there is at least one event in the returned slice.
+        
+        If no event occurs within specified timeout returns empty array.
+        Occuracy of timeout is in miliseconds.
 
         Note that returned slice is mutable.
         This indicates that it is invalidated on 
         the next call to read, just like byLine in std.stdio.
     */
+    Event[] read(Duration timeout)
+    {
+        return readImpl(cast(int)timeout.total!"msecs");
+    }
+
     Event[] read()
     {
+        return readImpl(-1);
+    }
+
+    private Event[] readImpl(int timeout)
+    {
+        pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = POLLIN;
+        if (poll(&pfd, 1, timeout) <= 0) return null;
         long len = .read(fd, buffer.ptr, buffer.length);
         enforce(len > 0, "failed to read inotify event");
         ubyte* head = buffer.ptr;
         events.length = 0;
-        events.assumeSafeAppend();        
+        events.assumeSafeAppend();
         while (len > 0)
         {
             auto eptr = cast(inotify_event*)head;
@@ -150,7 +169,7 @@ public struct INotify
 /// Create new INotify struct
 public auto iNotify()
 {
-    return INotify(inotify_init());
+    return INotify(inotify_init1(IN_NONBLOCK));
 }
 
 /++
@@ -199,24 +218,21 @@ public struct INotifyTree
         {
             if (d.isDir)
                 addWatch(d.name);
+        }
     }
-}
 
-///
-    TreeEvent[] read()
+    private TreeEvent[] readImpl(int timeout)
     {
-        import std.stdio;
-
         events.length = 0;
         events.assumeSafeAppend();
         // filter events for IN_DELETE_SELF to remove watches
         // and monitor IN_CREATE with IN_ISDIR to create new watches
         do
         {
-            auto evs = inotify.read();
+            auto evs = inotify.readImpl(timeout);
+            if (evs.length == 0) return null;
             foreach (e; evs)
             {
-                //writeln(e);
                 assert(e.watch in paths); //invariant
                 string path = paths[e.watch];
                 path ~= "/" ~ e.name; //FIXME: always allocates
@@ -229,7 +245,6 @@ public struct INotifyTree
                         rmWatch(e.watch);
                     }
                 }
-                //writeln(path);
                 // user may not be interested in IN_CREATE or IN_DELETE_SELF
                 // but we have to track them
                 if (mask & e.mask)
@@ -239,6 +254,18 @@ public struct INotifyTree
         while (events.length == 0); // some events get filtered... may be even all of them
         return events;
     }
+
+    ///
+    TreeEvent[] read(Duration timeout)
+    {
+        return readImpl(cast(int)timeout.total!"msecs");
+    }   
+
+    ///
+    TreeEvent[] read()
+    {
+        return readImpl(-1);
+    }   
 }
 
 ///
@@ -251,6 +278,7 @@ public auto iNotifyTree(string path, uint mask)
 unittest
 {
     import std.process;
+    import core.thread;
 
     executeShell("rm -rf tmp");
     executeShell("mkdir -p tmp/dir1/dir11");
@@ -267,4 +295,16 @@ unittest
     // b deleted as part of sub-tree
     assert(evs[2].mask == IN_DELETE && evs[2].path == "tmp/dir1/dir12/b.tmp");
     assert(evs[3].mask == (IN_DELETE | IN_ISDIR) && evs[3].path == "tmp/dir1/dir12");
+    evs = ntree.read(10.msecs);
+    assert(evs.length == 0);
+    auto t = new Thread((){
+        Thread.sleep(1000.msecs);
+        executeShell("touch tmp/dir1/dir11/c.tmp");
+    }).start();
+    evs = ntree.read(10.msecs);
+    t.join();
+    assert(evs.length == 0);
+    evs = ntree.read(10.msecs);
+    assert(evs.length == 1);
 }
+
