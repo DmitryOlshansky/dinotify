@@ -95,6 +95,8 @@ public struct INotify
 
     @disable this(this);
 
+    public @property int descriptor(){ return fd; }
+
     /// Add path to watch set of this INotify instance
     Watch add(const(char)* path, uint mask)
     {
@@ -220,6 +222,8 @@ public struct INotifyTree
                 addWatch(d.name);
         }
     }
+
+    public @property int descriptor(){ return inotify.descriptor; }
 
     private TreeEvent[] readImpl(int timeout)
     {
