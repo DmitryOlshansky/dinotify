@@ -1,0 +1,6 @@
+language: d
+
+matrix:
+  include:
+    - d: dmd
+    - d: ldc
