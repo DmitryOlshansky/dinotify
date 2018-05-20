@@ -12,35 +12,6 @@ import std.exception;
 
 private:
 
-///
-unittest
-{
-    import std.process, std.stdio : writeln, writefln;
-
-    auto monitor = iNotify();
-    executeShell("rm -rf tmp");
-    executeShell("mkdir tmp");
-    // literals are zero-terminated
-    monitor.add("tmp".ptr, IN_CREATE | IN_DELETE);
-    ubyte[] data = [1, 2, 3, 4];
-    executeShell("touch tmp/killme");
-    auto events = monitor.read();
-    assert(events[0].mask == IN_CREATE);
-    assert(events[0].name == "killme");
-
-    executeShell("rm -rf tmp/killme");
-    events = monitor.read();
-    assert(events[0].mask == IN_DELETE);
-
-    // Note: watched directory doesn't track events in sub-directories
-    executeShell("mkdir tmp/some-dir");
-    executeShell("touch tmp/some-dir/victim");
-    events = monitor.read();
-    assert(events.length == 1);
-    assert(events[0].mask == (IN_ISDIR | IN_CREATE));
-    assert(events[0].name == "some-dir");
-}
-
 // core.sys.linux is lacking, so just list proper prototypes on our own
 extern (C)
 {
@@ -174,6 +145,35 @@ public auto iNotify()
     return INotify(inotify_init1(IN_NONBLOCK));
 }
 
+///
+unittest
+{
+    import std.process, std.stdio : writeln, writefln;
+
+    auto monitor = iNotify();
+    executeShell("rm -rf tmp");
+    executeShell("mkdir tmp");
+    // literals are zero-terminated
+    monitor.add("tmp".ptr, IN_CREATE | IN_DELETE);
+    ubyte[] data = [1, 2, 3, 4];
+    executeShell("touch tmp/killme");
+    auto events = monitor.read();
+    assert(events[0].mask == IN_CREATE);
+    assert(events[0].name == "killme");
+
+    executeShell("rm -rf tmp/killme");
+    events = monitor.read();
+    assert(events[0].mask == IN_DELETE);
+
+    // Note: watched directory doesn't track events in sub-directories
+    executeShell("mkdir tmp/some-dir");
+    executeShell("touch tmp/some-dir/victim");
+    events = monitor.read();
+    assert(events.length == 1);
+    assert(events[0].mask == (IN_ISDIR | IN_CREATE));
+    assert(events[0].name == "some-dir");
+}
+
 /++
     Event as returned by INotifyTree.
     In constrast to Event, it has full path and no watch descriptor.
@@ -259,20 +259,22 @@ public struct INotifyTree
         return events;
     }
 
-    ///
+    /// Read events from `iNotifyTree` with timeout.
+    /// In contrast with `iNotify`, it lists full path to file (from the root of directory)
     TreeEvent[] read(Duration timeout)
     {
         return readImpl(cast(int)timeout.total!"msecs");
     }   
 
-    ///
+    /// Same as `read` but blocks the thread until some inotify event comes on watches.
     TreeEvent[] read()
     {
         return readImpl(-1);
     }   
 }
 
-///
+/// Create a INotifyTree to recusivly establish watches in `path`,
+/// using `mask` to choose which events to watch on.
 public auto iNotifyTree(string path, uint mask)
 {
     return INotifyTree(path, mask);
