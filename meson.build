@@ -4,6 +4,7 @@ project(
     'dinotify',
     'd',
     version: '0.3.0',
+    meson_version: '>=0.41',
     default_options: ['buildtype=release'],
 )
 
@@ -11,7 +12,9 @@ sources =  [
     'source/dinotify.d',
 ]
 
-shared_library(
+install_headers(sources, subdir: 'd/')
+
+sharedlib = shared_library(
     meson.project_name(),
     sources,
     version: meson.project_version(),
@@ -19,27 +22,20 @@ shared_library(
     install: true,
 )
 
-static_library(
+staticlib = static_library(
     meson.project_name(),
     sources,
     install: true,
 )
 
-install_data('source/dinotify.d', install_dir: get_option('prefix') + '/include/d')
-
-# The pkgconfig system produces C/C++ library flags which are of
-# little use with ldc2, so must do things the hard way. :-(
-
-pc_file_data = configuration_data()
-pc_file_data.set('NAME', meson.project_name())
-pc_file_data.set('VERSION', meson.project_version())
-pc_file_data.set('DESCRIPTION', 'A tiny D library to work with Linux\'s kernel inotify file events subsystem.')
-pc_file_data.set('LIBS', '-L-L${libdir} -L-l' + meson.project_name())
-pc_file_data.set('CFLAGS', '-I${includedir}/d')
-pc_file_data.set('PREFIX', get_option('prefix'))
-pc_file = configure_file(configuration: pc_file_data, input: meson.project_name() + '.pc.in', output: meson.project_name() + '.pc')
-
-install_data(pc_file, install_dir: 'share/pkgconfig')
+pkgconfig = import('pkgconfig')
+pkgconfig.generate(
+    name: meson.project_name(),
+    libraries: sharedlib,
+    subdirs: 'd/',
+    version: meson.project_version(),
+    description: 'A D library to work with Linux\'s kernel inotify file events subsystem.'
+)
 
 testExecutable = executable(
     'dinotify-test',
@@ -49,3 +45,8 @@ testExecutable = executable(
 )
 
 test('all tests', testExecutable)
+
+dinotfy_dep = declare_dependency(
+    link_with: sharedlib,
+    include_directories: [include_directories('source/')],
+)
