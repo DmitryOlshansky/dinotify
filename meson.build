@@ -14,17 +14,11 @@ sources =  [
 
 install_headers(sources, subdir: 'd/')
 
-sharedlib = shared_library(
+sharedlib = library(
     meson.project_name(),
     sources,
     version: meson.project_version(),
     soversion: '0',
-    install: true,
-)
-
-staticlib = static_library(
-    meson.project_name(),
-    sources,
     install: true,
 )
 
