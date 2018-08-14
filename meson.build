@@ -18,7 +18,7 @@ sharedlib = library(
     meson.project_name(),
     sources,
     version: meson.project_version(),
-    soversion: '0',
+    pic: true,
     install: true,
 )
 
