@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Module dinotify</title>
+		<link rel="stylesheet" type="text/css" href="./styles/ddox.css"/>
+		<link rel="stylesheet" href="./prettify/prettify.css" type="text/css"/>
+		<script type="text/javascript" src="./scripts/jquery.js">/**/</script><script type="text/javascript" src="./scripts/ddox.js">/**/</script>
+	</head>
+	<body onload="setupDdox();">
+		<nav id="main-nav">
+			<noscript>
+				<p style="color: red">The search functionality needs JavaScript enabled</p>
+			</noscript>
+			<div id="symbolSearchPane" style="display: none">
+				<form action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();"/>
+				</form>
+				<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="./symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "./";
+$('#symbolSearchPane').show();</script>
+			</div>
+			<ul class="tree-view">
+				<li>
+					<div class="module selected">
+						<a href="./dinotify.html">dinotify</a>
+					</div>
+				</li>
+			</ul>
+		</nav>
+		<div id="main-contents">
+			<h1>Module dinotify</h1><p>A tiny library to work with Linux's kernel inotify subsystem.
+</p><section></section>
+
+			<section></section>
+			<section>
+				<h2>Functions</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="iNotify" class="public" href="./dinotify/iNotify.html">iNotify</a><span class="decoration">()</span>
+							</code>
+						</td>
+						<td>Create new INotify struct
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="iNotifyTree" class="public" href="./dinotify/iNotifyTree.html">iNotifyTree</a><span class="decoration">(path, mask)</span>
+							</code>
+						</td>
+						<td>Create a INotifyTree to recusivly establish watches in <code class="lang-d"><a href="./dinotify/iNotifyTree.html#path"><span class="pln">path</span></a></code>,
+using <code class="lang-d"><a href="./dinotify/iNotifyTree.html#mask"><span class="pln">mask</span></a></code> to choose which events to watch on.
+</td>
+					</tr>
+				</table>
+			</section>
+			<section>
+				<h2>Structs</h2>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Name</th><th>Description</th>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="Event" class="public" href="./dinotify/Event.html">Event</a>
+							</code>
+						</td>
+						<td>D-ified inotify event, holds slice to temporary buffer with z-string.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="INotifyTree" class="public" href="./dinotify/INotifyTree.html">INotifyTree</a>
+							</code>
+						</td>
+						<td>Track events in the whole directory tree, automatically adding watches to
+    any new sub-directories and stopping watches in the deleted ones.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="TreeEvent" class="public" href="./dinotify/TreeEvent.html">TreeEvent</a>
+							</code>
+						</td>
+						<td>Event as returned by INotifyTree.
+    In constrast to Event, it has full path and no watch descriptor.
+</td>
+					</tr>
+					<tr>
+						<td>
+							<code>
+								<a id="Watch" class="public" href="./dinotify/Watch.html">Watch</a>
+							</code>
+						</td>
+						<td>Type-safe watch descriptor to help discern it from normal file descriptors
+</td>
+					</tr>
+				</table>
+			</section>
+			<footer>
+				<table class="license-info">
+					<tr>
+						<th>Authors</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>Copyright</th>
+						<td>
+							
+						</td>
+					</tr>
+					<tr>
+						<th>License</th>
+						<td>
+							
+						</td>
+					</tr>
+				</table>
+				<p class="faint">Generated using the DDOX documentation generator</p>
+			</footer>
+		</div>
+	</body>
+</html>
