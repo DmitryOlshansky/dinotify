@@ -209,17 +209,19 @@ public struct INotifyTree
         watches.remove(p);
     }
 
-    private this(string path, uint mask)
+    private this(string[] roots, uint mask)
     {
         import std.file;
 
         inotify = iNotify();
         this.mask = mask;
-        addWatch(path); //root
-        foreach (d; dirEntries(path, SpanMode.breadth))
-        {
-            if (d.isDir)
-                addWatch(d.name);
+        foreach (root; roots) {
+            addWatch(root);
+            foreach (d; dirEntries(root, SpanMode.breadth))
+            {
+                if (d.isDir)
+                    addWatch(d.name);
+            }
         }
     }
 
@@ -277,7 +279,11 @@ public struct INotifyTree
 /// using `mask` to choose which events to watch on.
 public auto iNotifyTree(string path, uint mask)
 {
-    return INotifyTree(path, mask);
+    return INotifyTree([path], mask);
+}
+public auto iNotifyTree(string[] roots, uint mask)
+{
+    return INotifyTree(roots, mask);
 }
 
 ///
