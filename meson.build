@@ -3,7 +3,7 @@
 project(
     'dinotify',
     'd',
-    version: '0.4.0',
+    version: '0.5.1',
     meson_version: '>=0.41',
     default_options: ['buildtype=release'],
 )
