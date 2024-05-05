@@ -7,8 +7,9 @@ module dinotify;
 import core.time;
 import core.sys.posix.unistd;
 import core.sys.posix.poll;
-import core.sys.linux.sys.inotify;
-import std.exception;
+import core.sys.posix.sys.stat;
+public import core.sys.linux.sys.inotify;
+import std.exception, std.string;
 
 private:
 
@@ -194,12 +195,24 @@ public struct INotifyTree
     private uint mask;
     private Watch[string] watches;
     private string[Watch] paths;
+    private bool[ulong] inodes;
+    private ulong[string] path2inodes;
     TreeEvent[] events;
 
-    private void addWatch(string dirPath)
+    private bool addWatch(string dirPath)
     {
+        stat_t st;
+        if (stat(dirPath.toStringz, &st) < 0) {
+            return false;
+        }
+        if (st.st_ino in inodes) {
+            return false;
+        }
         auto wd = watches[dirPath] = inotify.add(dirPath, mask | IN_CREATE | IN_DELETE_SELF);
         paths[wd] = dirPath;
+        inodes[st.st_ino] = true;
+        path2inodes[dirPath] = st.st_ino;
+        return true;
     }
 
     private void rmWatch(Watch w)
@@ -207,21 +220,28 @@ public struct INotifyTree
         auto p = paths[w];
         paths.remove(w);
         watches.remove(p);
+        auto inode = path2inodes[p];
+        inodes.remove(inode);
+        path2inodes.remove(p);
     }
 
     private this(string[] roots, uint mask)
     {
         import std.file;
 
+        void processDir(string root) {
+            if (!addWatch(root)) return;
+            foreach (d; dirEntries(root, SpanMode.shallow))
+            {
+                if (d.isDir)
+                    processDir(d.name);
+            }
+        }
+
         inotify = iNotify();
         this.mask = mask;
         foreach (root; roots) {
-            addWatch(root);
-            foreach (d; dirEntries(root, SpanMode.breadth))
-            {
-                if (d.isDir)
-                    addWatch(d.name);
-            }
+            processDir(root);
         }
     }
 
