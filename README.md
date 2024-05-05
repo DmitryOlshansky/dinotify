@@ -1,7 +1,7 @@
 dinotify
 ========
 
-[![Build Status](https://github.com/DmitryOlshansky/dinotify/actions/workflows/d.yml/badge.svg)
+![Build Status](https://github.com/DmitryOlshansky/dinotify/actions/workflows/d.yml/badge.svg)
 
 A tiny D library to work with Linux's kernel inotify file events subsystem.
 
